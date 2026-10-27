@@ -1,6 +1,7 @@
 """
 Configuration module for IronChat (Ultra-Private Zero-Trust E2EE Messenger).
 All credentials and personal data are strictly configurable via environment variables.
+Supports automatic cryptographically secure key generation when credentials are left empty.
 """
 
 import json
@@ -41,45 +42,65 @@ FILES_DIR.mkdir(parents=True, exist_ok=True)
 # ----------------- Application Credentials & Keys -----------------
 APP_DOMAIN = os.getenv("APP_DOMAIN", "localhost")
 VAPID_CLAIM_EMAIL = os.getenv("VAPID_CLAIM_EMAIL", "admin@example.com")
-E2EE_MASTER_PASSPHRASE = os.getenv("E2EE_MASTER_PASSPHRASE", "IronChat-ZeroKnowledge-MasterPassphrase-2026")
-E2EE_SALT = os.getenv("E2EE_SALT", "ironchat-e2ee-salt-standard-2026")
 COOKIE_NAME = "ironchat_session"
 
-# Application Secret Key for Session Signing:
-# Priority: 1) ENV var SECRET_KEY -> 2) persisted state.json -> 3) auto-generate cryptographically secure token
-def _resolve_secret_key() -> str:
-    env_key = os.getenv("SECRET_KEY", "").strip()
-    if env_key:
-        return env_key
-
-    # Check state file
-    try:
-        if STATE_FILE.exists():
+# Helper functions to load, persist, and resolve stateful cryptographic secrets
+def _load_state() -> dict:
+    if STATE_FILE.exists():
+        try:
             with open(STATE_FILE, "r", encoding="utf-8") as f:
-                state = json.load(f)
-                if state.get("secret_key"):
-                    return state["secret_key"]
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def _save_state(state: dict) -> None:
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
     except Exception:
         pass
 
-    # Generate new random key and save
-    generated = secrets.token_hex(32)
-    try:
-        current_state = {}
-        if STATE_FILE.exists():
-            try:
-                with open(STATE_FILE, "r", encoding="utf-8") as f:
-                    current_state = json.load(f)
-            except Exception:
-                current_state = {}
-        current_state["secret_key"] = generated
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump(current_state, f)
-    except Exception:
-        pass
+def _resolve_or_generate(env_var_name: str, state_key: str, generator_fn) -> str:
+    """
+    Priority:
+    1. Value set in environment variable (and non-empty)
+    2. Value previously generated and saved in data/state.json
+    3. Generate a new cryptographically secure token and persist it
+    """
+    env_val = os.getenv(env_var_name, "").strip()
+    if env_val:
+        return env_val
+
+    state = _load_state()
+    if state.get(state_key):
+        return state[state_key]
+
+    generated = generator_fn()
+    state[state_key] = generated
+    _save_state(state)
     return generated
 
-SECRET_KEY = _resolve_secret_key()
+# 1. HTTP Session Signing Key (64-character hex token if left empty)
+SECRET_KEY = _resolve_or_generate(
+    "SECRET_KEY",
+    "secret_key",
+    lambda: secrets.token_hex(32)
+)
+
+# 2. E2EE Master Passphrase Seed (High-entropy URL-safe token if left empty)
+E2EE_MASTER_PASSPHRASE = _resolve_or_generate(
+    "E2EE_MASTER_PASSPHRASE",
+    "e2ee_passphrase",
+    lambda: secrets.token_urlsafe(32)
+)
+
+# 3. E2EE Salt for PBKDF2 (32-character hex token if left empty)
+E2EE_SALT = _resolve_or_generate(
+    "E2EE_SALT",
+    "e2ee_salt",
+    lambda: secrets.token_hex(16)
+)
 
 # ----------------- Server Network Binding -----------------
 PORT = int(os.getenv("PORT", 8088))
