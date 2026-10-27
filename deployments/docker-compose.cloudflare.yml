@@ -1,0 +1,26 @@
+services:
+  ironchat:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: ironchat
+    restart: unless-stopped
+    volumes:
+      - ../data:/app/data
+    env_file:
+      - ../.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/manifest.json"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: ironchat-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - ironchat

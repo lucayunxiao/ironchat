@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>IronChat - Ultra-Private Two-Party E2EE Messenger</title>
+    
+    <!-- PWA & Mobile Web App Settings -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0b0f19">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="IronChat">
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+    <link rel="stylesheet" href="/static/css/chat.css?v={{ version }}">
+</head>
+<body class="dark-theme">
+    <div id="appContainer" class="app-container">
+        <!-- Floating Global Language Switcher -->
+        <button id="langToggleBtn" class="btn-lang-float" onclick="window.ironI18n.toggle()">🌐 EN</button>
+
+        <!-- ==================== Authentication View ==================== -->
+        <div id="authView" class="auth-view">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <img src="/static/icons/logo-transparent.png" alt="IronChat Logo" class="auth-logo">
+                    <h1 data-i18n="app_title">IronChat</h1>
+                    <p class="auth-subtitle" data-i18n="app_subtitle">Zero-Knowledge • AES-256-GCM • Ephemeral Self-Destruct</p>
+                    <div class="badge-whitelist" data-i18n="login_badge">Pair-Only Zero-Trust Access</div>
+                </div>
+
+                <!-- Step 1: Username Input -->
+                <div id="authStepUsername" class="auth-form-step">
+                    <div class="input-group">
+                        <label data-i18n="username_label">Username</label>
+                        <input type="text" id="loginUsername" data-i18n-placeholder="username_placeholder" placeholder="Enter username" autocomplete="username" autocapitalize="none">
+                    </div>
+                    <button id="btnCheckUser" class="btn-primary" data-i18n="btn_continue">Next</button>
+                </div>
+
+                <!-- Step 2: Dynamic Password (username@TOTP) -->
+                <div id="authStepPassword" class="auth-form-step hidden">
+                    <div class="user-chip">
+                        <span id="activeUsernameDisplay"></span>
+                        <a href="javascript:void(0)" id="btnSwitchUser" class="link-switch" data-i18n="btn_switch_user">Switch Account</a>
+                    </div>
+                    <div class="input-group">
+                        <label data-i18n="password_label">Dynamic Password</label>
+                        <input type="password" id="loginPassword" data-i18n-placeholder="password_placeholder" placeholder="Format: username@TOTP" autocomplete="current-password">
+                    </div>
+                    <button id="btnLogin" class="btn-primary" data-i18n="btn_login">Sign In</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== First-Time TOTP QR Code Modal ==================== -->
+        <div id="totpBindModal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2 data-i18n="totp_bind_title">First-Time Setup: Bind Authenticator</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="alert-box-warning" data-i18n="totp_compat_warning">
+                        ⚠️ Recommended: Standard 30-second interval. Note: Google Authenticator ignores custom 60s period settings and requires 30s for verification to succeed.
+                    </div>
+                    <p class="modal-tip" data-i18n="totp_bind_tip">Scan this QR code with your authenticator app or copy the manual key below:</p>
+                    
+                    <div class="qr-container">
+                        <img id="totpQrImage" src="" alt="TOTP QR Code">
+                    </div>
+
+                    <div class="secret-box">
+                        <span data-i18n="manual_key_label">Secret Key:</span>
+                        <code id="totpSecretText"></code>
+                        <button id="btnCopySecret" class="btn-secondary-sm">Copy</button>
+                    </div>
+
+                    <div class="input-group" style="margin-top: 16px;">
+                        <input type="text" id="firstTotpCode" data-i18n-placeholder="verify_code_placeholder" placeholder="Enter 6-digit dynamic code" maxlength="6" inputmode="numeric">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btnConfirmBind" class="btn-primary" data-i18n="btn_activate">Verify & Activate</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== Main Chat View ==================== -->
+        <div id="chatView" class="chat-view hidden">
+            <!-- Top Navigation Bar -->
+            <header class="chat-header">
+                <div class="peer-info">
+                    <div class="avatar-ring">
+                        <div class="avatar-placeholder" id="peerAvatarInitial">?</div>
+                        <span id="peerOnlineDot" class="status-dot offline"></span>
+                    </div>
+                    <div class="peer-text">
+                        <h2 id="peerUsernameDisplay">Peer</h2>
+                        <div class="status-label">
+                            <span id="peerStatusText" data-i18n="offline">Offline</span>
+                            <span id="peerTypingIndicator" class="typing-pill hidden" data-i18n="typing">is typing...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-actions">
+                    <button id="chatLangToggleBtn" class="btn-icon" onclick="window.ironI18n.toggle()" title="Toggle Language">🌐</button>
+                    <div class="dropdown-wrapper">
+                        <button id="btnHeaderMenu" class="btn-icon">⋮</button>
+                        <div id="headerDropdown" class="dropdown-menu hidden">
+                            <a href="javascript:void(0)" id="menuItemDevices" data-i18n="menu_devices">Push Devices</a>
+                            <a href="javascript:void(0)" id="menuItemResetPeer" data-i18n="menu_reset_peer">Reset Peer TOTP</a>
+                            <div class="dropdown-divider"></div>
+                            <a href="javascript:void(0)" id="menuItemPanic" class="danger-text" data-i18n="menu_panic">🚨 Panic Destruct</a>
+                            <div class="dropdown-divider"></div>
+                            <a href="javascript:void(0)" id="menuItemLogout" data-i18n="menu_logout">Sign Out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Message Stream Area -->
+            <main id="messageStream" class="message-stream">
+                <div id="streamPlaceholder" class="stream-empty-hint">
+                    <div class="lock-icon">🔒</div>
+                    <p data-i18n="connected">E2EE Channel Secure</p>
+                    <small data-i18n="app_subtitle">Zero-Knowledge • AES-256-GCM • Ephemeral Self-Destruct</small>
+                </div>
+            </main>
+
+            <!-- Attachment & Quote Replying Tray -->
+            <div id="replyBar" class="reply-bar hidden">
+                <div class="reply-bar-content">
+                    <span class="reply-bar-badge" data-i18n="replying_to">Replying to</span>
+                    <strong id="replyBarSender"></strong>:
+                    <span id="replyBarText" class="reply-bar-snippet"></span>
+                </div>
+                <button id="btnCancelReply" class="btn-icon-sm" data-i18n="cancel_reply">✕</button>
+            </div>
+
+            <div id="attachmentTray" class="attachment-tray hidden"></div>
+
+            <!-- Input & Actions Footer -->
+            <footer class="chat-footer">
+                <div class="footer-controls">
+                    <input type="file" id="filePickerInput" class="hidden" multiple>
+                    <button id="btnAttachFile" class="btn-icon-footer" title="Attach Files">📎</button>
+                    
+                    <!-- Burn Mode Selector -->
+                    <select id="burnModeSelect" class="select-burn-mode">
+                        <option value="never" data-i18n="burn_never">Keep (7d limit)</option>
+                        <option value="immediate" data-i18n="burn_immediate">Burn on view</option>
+                        <option value="10s" data-i18n="burn_10s">10s</option>
+                        <option value="30s" data-i18n="burn_30s">30s</option>
+                        <option value="1m" data-i18n="burn_1m">1m</option>
+                        <option value="5m" data-i18n="burn_5m">5m</option>
+                        <option value="1h" data-i18n="burn_1h">1h</option>
+                        <option value="24h" data-i18n="burn_24h">24h</option>
+                    </select>
+
+                    <div class="input-wrapper">
+                        <textarea id="chatInput" rows="1" data-i18n-placeholder="input_placeholder" placeholder="Type a message, paste image (Ctrl+V)..."></textarea>
+                    </div>
+
+                    <button id="btnSendMessage" class="btn-send" data-i18n="btn_send">Send</button>
+                </div>
+            </footer>
+        </div>
+
+        <!-- ==================== Modals ==================== -->
+
+        <!-- Lightbox Fullscreen Viewer -->
+        <div id="lightboxModal" class="modal-overlay hidden">
+            <div class="lightbox-content">
+                <div class="lightbox-toolbar">
+                    <button id="btnSaveLightboxImage" class="btn-secondary-sm" data-i18n="save_image">Save Image</button>
+                    <button id="btnCloseLightbox" class="btn-icon-sm">✕</button>
+                </div>
+                <img id="lightboxImg" src="" alt="Full view">
+            </div>
+        </div>
+
+        <!-- Emergency Panic Destruct Modal -->
+        <div id="panicModal" class="modal-overlay hidden">
+            <div class="modal-card modal-danger">
+                <div class="modal-header">
+                    <h2 data-i18n="panic_title">🚨 Emergency Data Destruction (Panic)</h2>
+                </div>
+                <div class="modal-body">
+                    <p class="danger-warning" data-i18n="panic_warn">
+                        WARNING: This will immediately double-pass overwrite and permanently shred ALL databases, messages, attachments, and TOTP keys, rebooting the container into a factory clean state. THIS ACTION CANNOT BE UNDONE!
+                    </p>
+                    <div class="input-group" style="margin-top: 16px;">
+                        <label data-i18n="panic_confirm_prompt">Type 'SHRED' to confirm:</label>
+                        <input type="text" id="panicConfirmInput" placeholder="SHRED" autocapitalize="characters">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btnCancelPanic" class="btn-secondary" data-i18n="btn_cancel">Cancel</button>
+                    <button id="btnExecutePanic" class="btn-danger-shred" data-i18n="btn_confirm_panic">Physically Shred Everything</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registered Devices Modal -->
+        <div id="devicesModal" class="modal-overlay hidden">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2 data-i18n="device_list_title">Registered Web Push Devices</h2>
+                    <button id="btnCloseDevices" class="btn-icon-sm">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div id="deviceListContainer" class="device-list"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btnSendTestPush" class="btn-secondary-sm" data-i18n="btn_test_push">Send Test Push</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="/static/js/i18n.js?v={{ version }}"></script>
+    <script src="/static/js/crypto.js?v={{ version }}"></script>
+    <script src="/static/js/app.js?v={{ version }}"></script>
+</body>
+</html>
