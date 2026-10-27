@@ -103,6 +103,30 @@ Your private chat is immediately accessible via `https://chat.yourdomain.com` wi
 
 ---
 
+## ⚙️ Environment Variables Reference
+
+All configuration is managed through environment variables specified in `.env`.
+
+| Variable | Type & Description | Default Value | Required? |
+| :--- | :--- | :--- | :--- |
+| **`USER_A`** | Case-sensitive username for the first authorized user | `alice` | **Yes** |
+| **`USER_B`** | Case-sensitive username for the second authorized user | `bob` | **Yes** |
+| **`TOTP_INTERVAL`** | TOTP dynamic code time step (seconds). **Keep 30** for universal app compatibility. | `30` | Optional |
+| **`SESSION_INACTIVITY_TIMEOUT`** | Inactivity timeout in seconds before user is logged out (e.g. 86400 = 24h). | `86400` | Optional |
+| **`DEAD_MAN_TIMEOUT`** | Inactivity timeout in seconds before entire database & media are shredded (172800 = 48h). | `172800` | Optional |
+| **`MESSAGE_RETENTION_SECONDS`** | Rolling retention limit in seconds; messages older than this are physically shredded (7 days). | `604800` | Optional |
+| **`SECRET_KEY`** | Secret key for signing session cookies. Auto-generates a 64-char secure token if empty. | *(Auto-generated)* | Optional |
+| **`E2EE_MASTER_PASSPHRASE`** | Seed for client-side PBKDF2 WebCrypto AES-GCM derivation. Auto-generated if empty. | *(Auto-generated)* | Optional |
+| **`E2EE_SALT`** | Salt for client-side PBKDF2 derivation. Auto-generated if empty. | *(Auto-generated)* | Optional |
+| **`APP_DOMAIN`** | Public hostname or domain of your IronChat instance. | `chat.example.com` | Optional |
+| **`VAPID_CLAIM_EMAIL`** | Admin contact email embedded in Web Push RFC 8292 headers (no emails are sent). | `admin@example.com` | Optional |
+| **`PORT`** | TCP port exposed on the host machine and used internally. | `8088` | Optional |
+| **`HOST`** | Network interface address to bind to. | `0.0.0.0` | Optional |
+| **`DATA_DIR`** | Path inside the container for database, files, and state. | `/app/data` | Optional |
+| **`CLOUDFLARE_TUNNEL_TOKEN`** | Cloudflare Tunnel authentication token (Used exclusively in Scheme 2). | *(None)* | Scheme 2 only |
+
+---
+
 ## 📱 Mobile PWA Installation (iOS & Android)
 
 To enable background lock-screen push notifications and an immersive full-screen experience:
