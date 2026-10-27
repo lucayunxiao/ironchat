@@ -67,12 +67,12 @@ The server acts as a blind, zero-knowledge ciphertext relay. If the host machine
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` to define your two usernames:
+   Edit `.env` to define your two usernames (all secrets can be left blank for auto-generation):
    ```env
    USER_A=alice
    USER_B=bob
-   TOTP_INTERVAL=30
-   SECRET_KEY=use-a-strong-random-secret-key-in-production
+   # That's it! All cryptographic keys (SECRET_KEY, E2EE_MASTER_PASSPHRASE, E2EE_SALT)
+   # are automatically generated with high-entropy randomness on first boot.
    ```
 
 3. **Launch container:**

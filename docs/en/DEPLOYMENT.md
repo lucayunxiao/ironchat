@@ -34,9 +34,10 @@ USER_B=bob
 # 2. TOTP Dynamic Interval (Keep 30 for universal compatibility)
 TOTP_INTERVAL=30
 
-# 3. Security Credentials (Change to random strings in production)
-SECRET_KEY=generate-a-long-random-string-here
-E2EE_MASTER_PASSPHRASE=YourCustomPassphrase2026!
+# 3. Security Credentials (Leave blank to automatically generate secure keys!)
+SECRET_KEY=
+E2EE_MASTER_PASSPHRASE=
+E2EE_SALT=
 
 # 4. Storage & Port
 PORT=8088

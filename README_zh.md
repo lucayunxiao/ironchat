@@ -72,12 +72,12 @@
    ```bash
    cp .env.example .env
    ```
-   编辑 `.env` 设置双方用户名：
+   编辑 `.env` 设置双方用户名（其余所有加密密钥直接留空即可自动生成）：
    ```env
    USER_A=alice
    USER_B=bob
-   TOTP_INTERVAL=30
-   SECRET_KEY=生产环境请修改为随机高强度长字符串
+   # 就这么简单！所有安全密钥（SECRET_KEY、E2EE_MASTER_PASSPHRASE、E2EE_SALT）
+   # 留空时系统会在首次启动时自动生成高强度随机密钥并固化保存。
    ```
 
 3. **启动容器服务：**

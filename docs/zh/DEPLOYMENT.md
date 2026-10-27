@@ -34,9 +34,10 @@ USER_B=bob
 # 2. TOTP 动态码步长（推荐保持 30 秒以确保 Authenticator 兼容性）
 TOTP_INTERVAL=30
 
-# 3. 会话签名与加密密钥（生产环境请修改为随机高强度字符串）
-SECRET_KEY=请修改为足够长的随机密钥字符串
-E2EE_MASTER_PASSPHRASE=YourCustomPassphrase2026!
+# 3. 会话签名与加密密钥（支持留空！留空时系统首次启动会自动生成高强度安全密钥并持久化保存）
+SECRET_KEY=
+E2EE_MASTER_PASSPHRASE=
+E2EE_SALT=
 
 # 4. 监听端口
 PORT=8088
