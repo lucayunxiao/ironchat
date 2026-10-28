@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -23,9 +23,18 @@ jobs:
         pip install -r requirements.txt pytest
 
     - name: Run Tests
+      env:
+        PYTHONPATH: .
       run: |
-        pytest tests/
+        python -m pytest tests/
 
     - name: Sanity Scan for Leakage
       run: |
-        ! grep -r -i -E "lucayunxiao|ironpeach|ironluca|192\.168\." app/
+        if grep -r -i -E "lucayunxiao|ironpeach|ironluca|192\.168\." app/; then
+          echo "Sensitive personal data detected in app/!"
+          exit 1
+        fi
+
+    - name: Build Docker Image
+      run: |
+        docker build -t ironchat:test .

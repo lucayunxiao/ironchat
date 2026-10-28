@@ -30,7 +30,8 @@ DEAD_MAN_TIMEOUT = int(os.getenv("DEAD_MAN_TIMEOUT", 48 * 3600))
 MESSAGE_RETENTION_SECONDS = int(os.getenv("MESSAGE_RETENTION_SECONDS", 7 * 24 * 3600))
 
 # ----------------- File and Data Storage Paths -----------------
-DATA_DIR = Path(os.getenv("DATA_DIR", "/app/data"))
+# Defaults to ./data in local/CI environments; in Docker it is overridden by ENV DATA_DIR=/app/data
+DATA_DIR = Path(os.getenv("DATA_DIR", "./data"))
 FILES_DIR = DATA_DIR / "files"
 DB_PATH = DATA_DIR / "chat.db"
 STATE_FILE = DATA_DIR / "state.json"
